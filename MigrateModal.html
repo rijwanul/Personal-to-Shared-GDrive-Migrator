@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 15px; color: #333; margin: 0; }
+      label { font-weight: bold; display: block; margin: 12px 0 6px; }
+      input[type="text"], input[type="email"] {
+        width: 100%; padding: 9px; box-sizing: border-box;
+        border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
+      }
+      input:disabled { background: #f1f3f4; color: #80868b; }
+      .hint { font-size: 12px; color: #5f6368; margin-top: 4px; line-height: 1.4; }
+      .check-row { margin-top: 12px; font-size: 13px; }
+      .check-row label { display: inline; font-weight: normal; margin: 0; }
+
+      .subsection {
+        margin-top: 12px; padding: 10px; background: #f8f9fa; border: 1px solid #e8eaed; border-radius: 6px;
+      }
+      .subsection > .subtitle { font-weight: bold; font-size: 12px; color: #444; margin-bottom: 6px; }
+      .cc-row { display: flex; gap: 6px; margin-top: 6px; }
+      .cc-row input { flex: 1; }
+      .cc-row button.small {
+        width: auto; margin: 0; padding: 8px 10px; font-size: 12px; background: #5f6368;
+      }
+      .cc-list { margin-top: 6px; }
+      .cc-chip {
+        display: inline-flex; align-items: center; gap: 5px; background: #e8f0fe; color: #1a73e8;
+        border-radius: 13px; padding: 3px 9px; font-size: 11px; margin: 0 5px 5px 0;
+      }
+      .cc-chip button {
+        width: auto; margin: 0; padding: 0; background: none; border: none; color: #1a73e8;
+        font-weight: bold; cursor: pointer; font-size: 12px; line-height: 1;
+      }
+      .notify-types .opt { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; font-size: 12px; }
+
+      button {
+        background: #1a73e8; color: #fff; border: none; padding: 10px 16px;
+        font-size: 14px; border-radius: 4px; cursor: pointer; margin-top: 12px; width: 100%;
+      }
+      button.secondary { background: #f9ab00; }
+      button.danger { background: #d93025; }
+      button.outline { background: #fff; color: #1a73e8; border: 1px solid #1a73e8; }
+      button:disabled { background: #ccc; color: #fff; border-color: #ccc; cursor: not-allowed; }
+      #status { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; font-size: 13px; line-height: 1.5; }
+      .open-btn {
+        display: inline-block; margin: 8px 6px 0 0; padding: 8px 12px; color: #fff;
+        text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 13px;
+      }
+      .green { background: #34a853; } .blue { background: #1a73e8; } .gray { background: #5f6368; }
+
+      #runningBanner {
+        display: none; margin-bottom: 8px; padding: 12px; border-radius: 6px;
+        background: #fff4e5; border: 1px solid #f5c26b; color: #7a4b00; font-size: 13px; line-height: 1.5;
+      }
+      #runningBanner strong.title { display: block; font-size: 14px; margin-bottom: 3px; }
+
+      #bgBadge {
+        display: none; margin-top: 12px; padding: 8px 10px; border-radius: 4px;
+        font-size: 12px; line-height: 1.5; background: #e6f4ea; color: #137333; border: 1px solid #b7e1c1;
+      }
+      #bgBadge.off { background: #f1f3f4; color: #5f6368; border-color: #dadce0; }
+      #bgBadge.warn { background: #fef7e0; color: #8a6d00; border-color: #f0d98a; }
+      #bgBadge.paused { background: #e8f0fe; color: #174ea6; border-color: #b6ccf7; }
+      #bgBadge .note { display: block; margin-top: 6px; font-size: 11px; opacity: 0.9; }
+
+      #progressWrap { display: none; margin-top: 12px; }
+      .progress-track { width: 100%; height: 20px; background: #e8eaed; border-radius: 10px; overflow: hidden; }
+      .progress-fill {
+        height: 100%; width: 0%; background: linear-gradient(90deg, #1a73e8, #34a853);
+        transition: width 0.4s ease; display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 11px; font-weight: bold;
+      }
+      .progress-meta { font-size: 12px; color: #5f6368; margin-top: 5px; display: flex; justify-content: space-between; }
+
+      #log {
+        margin-top: 10px; height: 130px; overflow-y: auto; background: #202124; color: #e8eaed;
+        border: 1px solid #333; padding: 8px; font-family: monospace; font-size: 11px;
+        white-space: pre-wrap; display: none; border-radius: 4px; line-height: 1.5;
+      }
+
+      #emailEditor { display: none; margin-top: 12px; }
+      #emailSaveBtn { margin-top: 8px; }
+      #emailSavedNote { font-size: 11px; color: #137333; margin-top: 5px; display: none; }
+    </style>
+  </head>
+  <body>
+    <div id="runningBanner"></div>
+
+    <label>Source Folder URL (Personal Drive):</label>
+    <input type="text" id="src" placeholder="https://drive.google.com/drive/folders/..." />
+
+    <label>Target Folder URL (Shared Drive):</label>
+    <input type="text" id="dst" placeholder="https://drive.google.com/drive/folders/..." />
+    <div class="hint">A folder named "[SD] &lt;source name&gt;" will be created inside the target.</div>
+
+    <div class="check-row">
+      <input type="checkbox" id="copyForeign" checked />
+      <label for="copyForeign">Copy files owned by others into the Shared Drive (originals parked in one [Unmovable] folder)</label>
+    </div>
+
+    <div class="check-row">
+      <input type="checkbox" id="bgMode" checked />
+      <label for="bgMode">Keep running in the background (recommended)</label>
+      <div class="hint">
+        Continues on Google's servers even if you close this dialog or lose power.
+        If the daily runtime limit is reached, it pauses and resumes by itself later.
+      </div>
+    </div>
+
+    <div class="subsection" id="startEmailBox">
+      <div class="subtitle">Email notifications (sent to <span id="ownerEmailStart">you</span>)</div>
+
+      <label style="margin-top:6px">CC additional people (optional):</label>
+      <div class="cc-row">
+        <input type="email" id="ccInputStart" placeholder="name@example.com" onkeydown="if(event.key==='Enter'){event.preventDefault();addCc('start');}" />
+        <button type="button" class="small" onclick="addCc('start')">Add</button>
+      </div>
+      <div class="cc-list" id="ccListStart"></div>
+
+      <div class="notify-types" style="margin-top:8px">
+        <label style="margin-bottom:5px">Send email when:</label>
+        <span class="opt"><input type="checkbox" id="notifyPauseStart" checked /> <label for="notifyPauseStart">Paused</label></span>
+        <span class="opt"><input type="checkbox" id="notifyResumeStart" checked /> <label for="notifyResumeStart">Resumed</label></span>
+        <span class="opt"><input type="checkbox" id="notifyCompleteStart" checked /> <label for="notifyCompleteStart">Completed</label></span>
+      </div>
+    </div>
+
+    <button id="startBtn" onclick="start()">Start Migration</button>
+    <button id="contBtn" class="secondary" style="display:none" onclick="cont()">Continue Migration</button>
+    <button id="bgBtn" class="outline" style="display:none" onclick="toggleBg()">Stop Background Mode</button>
+    <button id="emailToggleBtn" class="outline" style="display:none" onclick="toggleEmailEditor()">Edit Email Notifications</button>
+    <button id="resetBtn" class="danger" style="display:none" onclick="resetAll()">Discard Saved Migration &amp; Start Over</button>
+
+    <div class="subsection" id="emailEditor">
+      <div class="subtitle">Email notifications (sent to <span id="ownerEmailRun">the account owner</span>)</div>
+
+      <label style="margin-top:6px">CC additional people:</label>
+      <div class="cc-row">
+        <input type="email" id="ccInputRun" placeholder="name@example.com" onkeydown="if(event.key==='Enter'){event.preventDefault();addCc('run');}" />
+        <button type="button" class="small" onclick="addCc('run')">Add</button>
+      </div>
+      <div class="cc-list" id="ccListRun"></div>
+
+      <div class="notify-types" style="margin-top:8px">
+        <label style="margin-bottom:5px">Send email when:</label>
+        <span class="opt"><input type="checkbox" id="notifyPauseRun" /> <label for="notifyPauseRun">Paused</label></span>
+        <span class="opt"><input type="checkbox" id="notifyResumeRun" /> <label for="notifyResumeRun">Resumed</label></span>
+        <span class="opt"><input type="checkbox" id="notifyCompleteRun" /> <label for="notifyCompleteRun">Completed</label></span>
+      </div>
+
+      <button id="emailSaveBtn" onclick="saveEmailSettings()">Save Email Settings</button>
+      <div id="emailSavedNote">Saved.</div>
+    </div>
+
+    <div id="bgBadge"></div>
+
+    <div id="progressWrap">
+      <div class="progress-track"><div class="progress-fill" id="progressFill">0%</div></div>
+      <div class="progress-meta">
+        <span id="progressText">Folders: 0 / 0</span>
+        <span id="progressTimer">00:00</span>
+      </div>
+    </div>
+
+    <div id="status"></div>
+    <div id="log"></div>
+
+    <script>
+      var timerHandle = null, timerStart = 0, pollHandle = null, lastReport = null, countdownHandle = null;
+      var ccListStart = [];
+      var ccListRun = [];
+
+      function startTimer() {
+        if (timerHandle) return;
+        timerStart = Date.now();
+        timerHandle = setInterval(function() {
+          var s = Math.floor((Date.now() - timerStart) / 1000);
+          document.getElementById('progressTimer').innerText =
+            ('0' + Math.floor(s / 60)).slice(-2) + ':' + ('0' + (s % 60)).slice(-2);
+        }, 1000);
+      }
+      function stopTimer() { if (timerHandle) { clearInterval(timerHandle); timerHandle = null; } }
+      function stopPolling() { if (pollHandle) { clearTimeout(pollHandle); pollHandle = null; } }
+      function stopCountdown() { if (countdownHandle) { clearInterval(countdownHandle); countdownHandle = null; } }
+
+      function setFormLocked(locked) {
+        document.getElementById('src').disabled = locked;
+        document.getElementById('dst').disabled = locked;
+        document.getElementById('copyForeign').disabled = locked;
+        document.getElementById('bgMode').disabled = locked;
+        document.getElementById('startEmailBox').style.display = locked ? 'none' : 'block';
+      }
+
+      function isValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+      function addCc(which) {
+        var input = document.getElementById(which === 'start' ? 'ccInputStart' : 'ccInputRun');
+        var list = which === 'start' ? ccListStart : ccListRun;
+        var v = input.value.trim();
+        if (!v) return;
+        if (!isValidEmail(v)) { alert('Enter a valid email address.'); return; }
+        if (list.map(x => x.toLowerCase()).indexOf(v.toLowerCase()) === -1) list.push(v);
+        input.value = '';
+        renderCcList(which);
+      }
+      function removeCc(which, email) {
+        var list = which === 'start' ? ccListStart : ccListRun;
+        var idx = list.indexOf(email);
+        if (idx !== -1) list.splice(idx, 1);
+        renderCcList(which);
+      }
+      function renderCcList(which) {
+        var list = which === 'start' ? ccListStart : ccListRun;
+        var box = document.getElementById(which === 'start' ? 'ccListStart' : 'ccListRun');
+        box.innerHTML = '';
+        list.forEach(function(email) {
+          var chip = document.createElement('span');
+          chip.className = 'cc-chip';
+          chip.innerText = email;
+          var rm = document.createElement('button');
+          rm.type = 'button';
+          rm.innerText = '×';
+          rm.onclick = function() { removeCc(which, email); };
+          chip.appendChild(rm);
+          box.appendChild(chip);
+        });
+      }
+
+      function toggleEmailEditor() {
+        var box = document.getElementById('emailEditor');
+        var show = box.style.display !== 'block';
+        box.style.display = show ? 'block' : 'none';
+        if (show && lastReport) {
+          ccListRun = (lastReport.ccEmails || []).slice();
+          renderCcList('run');
+          var n = lastReport.notify || { pause: true, resume: true, complete: true };
+          document.getElementById('notifyPauseRun').checked = !!n.pause;
+          document.getElementById('notifyResumeRun').checked = !!n.resume;
+          document.getElementById('notifyCompleteRun').checked = !!n.complete;
+          document.getElementById('ownerEmailRun').innerText = lastReport.notifyEmail || 'the account owner';
+        }
+      }
+
+      function saveEmailSettings() {
+        var btn = document.getElementById('emailSaveBtn');
+        btn.disabled = true;
+        google.script.run
+          .withSuccessHandler(function(res) {
+            btn.disabled = false;
+            if (res.error) { alert('Error: ' + res.error); return; }
+            renderReport(res);
+            var note = document.getElementById('emailSavedNote');
+            note.style.display = 'block';
+            setTimeout(function() { note.style.display = 'none'; }, 2500);
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            alert('System error: ' + err.message);
+          })
+          .updateEmailSettings({
+            ccEmails: ccListRun,
+            notify: {
+              pause: document.getElementById('notifyPauseRun').checked,
+              resume: document.getElementById('notifyResumeRun').checked,
+              complete: document.getElementById('notifyCompleteRun').checked
+            }
+          });
+      }
+
+      // Pick up a saved or running migration when the dialog opens
+      google.script.run.withSuccessHandler(function(res) {
+        if (res.none) return;
+        if (res.notifyEmail) document.getElementById('ownerEmailStart').innerText = res.notifyEmail;
+        if (res.finished) return;
+
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('resetBtn').style.display = 'block';
+        document.getElementById('progressWrap').style.display = 'block';
+        renderReport(res);
+
+        if (res.paused) {
+          document.getElementById('contBtn').style.display = 'block';
+          startPolling();
+        } else if (res.background && res.triggerActive) {
+          showStatus('#e6f4ea', '#137333',
+            'A background migration of "<strong>' + res.sourceName + '</strong>" is running on the server. ' +
+            'This dialog will keep showing its progress.');
+          startPolling();
+        } else {
+          document.getElementById('contBtn').style.display = 'block';
+          showStatus('#fff8e1', '#8a6d00',
+            'Unfinished migration of "<strong>' + res.sourceName + '</strong>" found. Click "Continue Migration" to resume.');
+        }
+      }).getMigrationStatus();
+
+      function start() {
+        var s = document.getElementById('src').value.trim();
+        var d = document.getElementById('dst').value.trim();
+        if (!s || !d) { alert('Please enter both URLs.'); return; }
+        setBusy(true, 'Starting migration...');
+        document.getElementById('progressWrap').style.display = 'block';
+        updateBar(0, 0, 1);
+        startTimer();
+        google.script.run
+          .withSuccessHandler(handle)
+          .withFailureHandler(fail)
+          .startMigration(s, d, {
+            copyForeignFiles: document.getElementById('copyForeign').checked,
+            background: document.getElementById('bgMode').checked,
+            ccEmails: ccListStart,
+            notify: {
+              pause: document.getElementById('notifyPauseStart').checked,
+              resume: document.getElementById('notifyResumeStart').checked,
+              complete: document.getElementById('notifyCompleteStart').checked
+            }
+          });
+      }
+
+      function cont() {
+        stopPolling();
+        setBusy(true, 'Continuing migration...');
+        document.getElementById('progressWrap').style.display = 'block';
+        startTimer();
+        google.script.run
+          .withSuccessHandler(handle)
+          .withFailureHandler(fail)
+          .continueMigration();
+      }
+
+      function toggleBg() {
+        var turnOn = !(lastReport && lastReport.background);
+        document.getElementById('bgBtn').disabled = true;
+        google.script.run
+          .withSuccessHandler(function(res) {
+            document.getElementById('bgBtn').disabled = false;
+            if (res.error) { showStatus('#ffebee', '#c62828', 'Error: ' + res.error); return; }
+            renderReport(res);
+            if (res.background) startPolling();
+            else { stopPolling(); document.getElementById('contBtn').style.display = 'block'; }
+          })
+          .withFailureHandler(function(err) {
+            document.getElementById('bgBtn').disabled = false;
+            showStatus('#ffebee', '#c62828', 'System error: ' + err.message);
+          })
+          .setBackgroundMode(turnOn);
+      }
+
+      function resetAll() {
+        if (!confirm('Discard saved progress and stop any background job? Folders already created/moved stay as they are.')) return;
+        stopPolling();
+        stopCountdown();
+        google.script.run.withSuccessHandler(function() {
+          stopTimer();
+          lastReport = null;
+          setFormLocked(false);
+          document.getElementById('runningBanner').style.display = 'none';
+          document.getElementById('status').style.display = 'none';
+          document.getElementById('log').style.display = 'none';
+          document.getElementById('progressWrap').style.display = 'none';
+          document.getElementById('bgBadge').style.display = 'none';
+          document.getElementById('emailEditor').style.display = 'none';
+          document.getElementById('emailToggleBtn').style.display = 'none';
+          document.getElementById('startBtn').style.display = 'block';
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('contBtn').style.display = 'none';
+          document.getElementById('bgBtn').style.display = 'none';
+          document.getElementById('resetBtn').style.display = 'none';
+        }).resetMigrationState();
+      }
+
+      function updateBar(percent, done, total) {
+        var f = document.getElementById('progressFill');
+        f.style.width = percent + '%';
+        f.innerText = percent + '%';
+        document.getElementById('progressText').innerText = 'Folders: ' + done + ' / ' + total;
+      }
+
+      function fmtTime(ms) {
+        if (!ms) return 'not yet';
+        var d = new Date(ms);
+        return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
+      }
+
+      function fmtCountdown(ms) {
+        if (ms <= 0) return 'any moment now';
+        var s = Math.floor(ms / 1000);
+        var h = Math.floor(s / 3600);
+        var m = Math.floor((s % 3600) / 60);
+        return h + 'h ' + ('0' + m).slice(-2) + 'm';
+      }
+
+      function renderRunningBanner(res) {
+        var box = document.getElementById('runningBanner');
+        if (res.finished) { box.style.display = 'none'; return; }
+
+        var state = res.paused ? 'is paused (daily limit)' :
+                    (res.background ? 'is running in the background' : 'is in progress');
+
+        box.style.display = 'block';
+        box.innerHTML =
+          '<strong class="title">A migration is already running</strong>' +
+          'The migration of "<strong>' + res.sourceName + '</strong>" ' + state + '. ' +
+          'A new migration cannot be started until it is finished.<br>' +
+          'Progress: ' + res.percent + '% (' + res.foldersDone + ' / ' + res.foldersTotal + ' folders)' +
+          (res.startedAtText ? '<br>Started: ' + res.startedAtText : '') +
+          '<br><span style="font-size:11px">Anyone signed in with this account sees the same migration.</span>';
+      }
+
+      function renderBadge(res) {
+        var badge = document.getElementById('bgBadge');
+        stopCountdown();
+        if (res.finished) { badge.style.display = 'none'; return; }
+        badge.style.display = 'block';
+
+        if (res.paused) {
+          badge.className = 'paused';
+          var draw = function() {
+            var left = res.resumeAt - Date.now();
+            badge.innerHTML = '<strong>Paused: daily runtime limit reached</strong> (' +
+              res.runtimeMinLimit + ' min).<br>Resumes automatically on <strong>' + res.resumeAtText +
+              '</strong> &mdash; in ' + fmtCountdown(left) + '.<br>' +
+              'Or click "Continue Migration" to keep going now while this dialog is open.' +
+              '<span class="note">Note: manually continuing while paused is not blocked by the daily-limit pause, ' +
+              'but it still shares Google\'s other per-day quotas, so it can occasionally get stuck or fail too.</span>';
+          };
+          draw();
+          countdownHandle = setInterval(draw, 30000);
+        } else if (res.background && res.triggerActive) {
+          badge.className = '';
+          badge.innerHTML = '<strong>Background mode: ON</strong> &mdash; safe to close this dialog. ' +
+            'Last server run: ' + fmtTime(res.lastRunAt) + '. ' +
+            'Daily runtime used: ' + res.runtimeMinUsed + ' / ' + res.runtimeMinLimit + ' min.' +
+            (res.lastError ? '<br>Last error: ' + res.lastError : '');
+        } else if (res.background && !res.triggerActive) {
+          badge.className = 'warn';
+          badge.innerHTML = '<strong>Background mode is enabled but no trigger was found.</strong> ' +
+            'Stop it and turn it on again, or use Continue Migration.';
+        } else {
+          badge.className = 'off';
+          badge.innerHTML = '<strong>Background mode: OFF</strong> &mdash; moves only while this dialog is open.';
+        }
+      }
+
+      function renderReport(res) {
+        lastReport = res;
+        var s = res.stats;
+        var summary =
+          'Files moved individually: ' + s.files + ' | Folders moved whole: ' + s.foldersMoved +
+          ' | Folders recreated: ' + s.foldersRecreated + ' | Empty folders removed: ' + s.foldersEmptied +
+          '<br>Moved to Hidden Files in Folders: ' + s.hiddenFolders +
+          ' | Parked in [Unmovable]: ' + s.parked + ' | Copied: ' + s.copied + ' | Errors: ' + s.errors;
+
+        updateBar(res.percent, res.foldersDone, res.foldersTotal);
+        renderBadge(res);
+        renderRunningBanner(res);
+
+        var lg = document.getElementById('log');
+        lg.style.display = 'block';
+        lg.innerText = res.log.join('\n');
+        lg.scrollTop = lg.scrollHeight;
+
+        var bgBtn = document.getElementById('bgBtn');
+        bgBtn.innerText = res.background ? 'Stop Background Mode' : 'Turn On Background Mode';
+        var emailBtn = document.getElementById('emailToggleBtn');
+
+        if (res.finished) {
+          stopTimer();
+          stopPolling();
+          stopCountdown();
+          setFormLocked(false);
+          setBusy(false);
+          document.getElementById('startBtn').style.display = 'none';
+          document.getElementById('contBtn').style.display = 'none';
+          bgBtn.style.display = 'none';
+          emailBtn.style.display = 'none';
+          document.getElementById('emailEditor').style.display = 'none';
+          document.getElementById('resetBtn').style.display = 'block';
+          document.getElementById('resetBtn').innerText = 'Start a New Migration';
+
+          var extra = res.unmovableUrl
+            ? '<a class="open-btn gray" target="_blank" href="' + res.unmovableUrl + '">Open [Unmovable] ↗</a>' : '';
+
+          showStatus('#e8f5e9', '#2e7d32',
+            '<strong>Migration complete!</strong><br>' + summary + '<br>' +
+            '<a class="open-btn blue" target="_blank" href="' + res.sourceUrl + '">Open Personal Folder ↗</a>' +
+            '<a class="open-btn green" target="_blank" href="' + res.sdUrl + '">Open Shared Drive Folder ↗</a>' +
+            extra);
+        } else {
+          setFormLocked(true);
+          document.getElementById('startBtn').style.display = 'none';
+          document.getElementById('resetBtn').style.display = 'block';
+          document.getElementById('resetBtn').innerText = 'Discard Saved Migration & Start Over';
+          bgBtn.style.display = 'block';
+          emailBtn.style.display = 'block';
+          showStatus(res.paused ? '#e8f0fe' : '#fff8e1', res.paused ? '#174ea6' : '#8a6d00',
+            (res.paused ? 'Paused: ' : 'Working on ') + '"' + res.sourceName + '"...<br>' + summary);
+        }
+      }
+
+      function handle(res) {
+        // Someone else (or another window) already has a migration going
+        if (res.alreadyRunning) {
+          stopTimer();
+          setBusy(false);
+          if (res.status && !res.status.none) {
+            document.getElementById('progressWrap').style.display = 'block';
+            renderReport(res.status);
+            document.getElementById('contBtn').style.display = 'none';
+            if (!res.status.paused) startPolling();
+          }
+          showStatus('#fff4e5', '#7a4b00', res.error);
+          return;
+        }
+
+        if (res.error) { stopTimer(); setBusy(false); showStatus('#ffebee', '#c62828', 'Error: ' + res.error); return; }
+
+        renderReport(res);
+        if (res.finished) return;
+
+        if (res.paused) {
+          setBusy(false);
+          document.getElementById('contBtn').style.display = 'block';
+          stopTimer();
+          startPolling();
+        } else if (res.background || res.workerBusy) {
+          setBusy(false);
+          document.getElementById('contBtn').style.display = 'none';
+          startPolling();
+        } else {
+          cont();
+        }
+      }
+
+      // Watch a background migration without doing any work ourselves
+      function startPolling() {
+        stopPolling();
+        document.getElementById('progressWrap').style.display = 'block';
+        startTimer();
+        pollHandle = setTimeout(function() {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              if (res.none) { stopPolling(); stopTimer(); return; }
+              renderReport(res);
+              if (res.finished) return;
+              if (res.background || res.paused) {
+                document.getElementById('contBtn').style.display = res.paused ? 'block' : 'none';
+                startPolling();
+              } else {
+                stopTimer();
+                document.getElementById('contBtn').style.display = 'block';
+              }
+            })
+            .withFailureHandler(function() { startPolling(); })
+            .getMigrationStatus();
+        }, 8000);
+      }
+
+      function fail(err) {
+        stopTimer();
+        setBusy(false);
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('contBtn').style.display = 'block';
+        document.getElementById('resetBtn').style.display = 'block';
+        showStatus('#ffebee', '#c62828',
+          'System error: ' + err.message + '<br>Progress is saved. Click "Continue Migration" to resume.');
+      }
+
+      function setBusy(b, msg) {
+        document.getElementById('startBtn').disabled = b;
+        document.getElementById('contBtn').disabled = b;
+        document.getElementById('resetBtn').disabled = b;
+        if (msg) showStatus('#e8f0fe', '#1a73e8', msg);
+      }
+
+      function showStatus(bg, color, html) {
+        var st = document.getElementById('status');
+        st.style.display = 'block'; st.style.background = bg; st.style.color = color; st.innerHTML = html;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f6f9;
+        margin: 0;
+        padding: 20px;
+        color: #333;
+      }
+      .container {
+        max-width: 660px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      h2 { margin-top: 0; color: #1a73e8; }
+
+      .tabs { display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 10px; }
+      .tab {
+        flex: 1; text-align: center; padding: 12px 8px; cursor: pointer;
+        font-weight: bold; color: #5f6368; border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+      }
+      .tab.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+      .panel { display: none; }
+      .panel.active { display: block; }
+
+      label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
+      textarea, input[type="text"], input[type="email"] {
+        width: 100%; padding: 10px; box-sizing: border-box;
+        border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
+      }
+      input:disabled, textarea:disabled { background: #f1f3f4; color: #80868b; }
+      textarea { height: 120px; resize: vertical; }
+      .hint { font-size: 12px; color: #5f6368; margin-top: 4px; line-height: 1.4; }
+      .check-row { margin-top: 14px; font-size: 14px; }
+      .check-row label { display: inline; font-weight: normal; margin: 0; }
+
+      .subsection {
+        margin-top: 14px; padding: 12px; background: #f8f9fa; border: 1px solid #e8eaed; border-radius: 6px;
+      }
+      .subsection > .subtitle { font-weight: bold; font-size: 13px; color: #444; margin-bottom: 8px; }
+      .cc-row { display: flex; gap: 6px; margin-top: 6px; }
+      .cc-row input { flex: 1; }
+      .cc-row button.small {
+        width: auto; margin: 0; padding: 8px 10px; font-size: 13px; background: #5f6368;
+      }
+      .cc-list { margin-top: 8px; }
+      .cc-chip {
+        display: inline-flex; align-items: center; gap: 6px; background: #e8f0fe; color: #1a73e8;
+        border-radius: 14px; padding: 4px 10px; font-size: 12px; margin: 0 6px 6px 0;
+      }
+      .cc-chip button {
+        width: auto; margin: 0; padding: 0; background: none; border: none; color: #1a73e8;
+        font-weight: bold; cursor: pointer; font-size: 13px; line-height: 1;
+      }
+      .notify-types label { font-weight: normal; }
+      .notify-types .opt { display: inline-flex; align-items: center; gap: 5px; margin-right: 16px; font-size: 13px; }
+
+      button {
+        background-color: #1a73e8; color: white; border: none;
+        padding: 12px 20px; font-size: 15px; border-radius: 4px;
+        cursor: pointer; margin-top: 20px; width: 100%;
+      }
+      button.secondary { background-color: #f9ab00; margin-top: 10px; }
+      button.danger { background-color: #d93025; margin-top: 10px; }
+      button.outline {
+        background: #fff; color: #1a73e8; border: 1px solid #1a73e8; margin-top: 10px;
+      }
+      button:disabled { background-color: #ccc; color: #fff; border-color: #ccc; cursor: not-allowed; }
+
+      .status-box { margin-top: 20px; padding: 12px; border-radius: 4px; display: none; font-size: 14px; line-height: 1.5; }
+      .open-btn {
+        display: inline-block; margin: 10px 8px 0 0; padding: 8px 12px;
+        color: white; text-decoration: none; border-radius: 4px;
+        font-weight: bold; text-align: center; font-size: 13px;
+      }
+      .green { background-color: #34a853; }
+      .blue { background-color: #1a73e8; }
+      .gray { background-color: #5f6368; }
+
+      /* "Already running" banner */
+      #runningBanner {
+        display: none; margin-top: 16px; padding: 14px; border-radius: 6px;
+        background: #fff4e5; border: 1px solid #f5c26b; color: #7a4b00; font-size: 14px; line-height: 1.55;
+      }
+      #runningBanner strong.title { display: block; font-size: 15px; margin-bottom: 4px; }
+
+      /* Background badge */
+      #bgBadge {
+        display: none; margin-top: 16px; padding: 10px 12px; border-radius: 4px;
+        font-size: 13px; line-height: 1.5; background: #e6f4ea; color: #137333; border: 1px solid #b7e1c1;
+      }
+      #bgBadge.off { background: #f1f3f4; color: #5f6368; border-color: #dadce0; }
+      #bgBadge.warn { background: #fef7e0; color: #8a6d00; border-color: #f0d98a; }
+      #bgBadge.paused { background: #e8f0fe; color: #174ea6; border-color: #b6ccf7; }
+      #bgBadge .note { display: block; margin-top: 6px; font-size: 12px; opacity: 0.9; }
+
+      /* Progress bar */
+      #progressWrap { display: none; margin-top: 16px; }
+      .progress-track {
+        width: 100%; height: 22px; background: #e8eaed; border-radius: 11px; overflow: hidden;
+      }
+      .progress-fill {
+        height: 100%; width: 0%; background: linear-gradient(90deg, #1a73e8, #34a853);
+        transition: width 0.4s ease; display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 12px; font-weight: bold;
+      }
+      .progress-meta { font-size: 12px; color: #5f6368; margin-top: 6px; display: flex; justify-content: space-between; }
+
+      /* Live feed */
+      .log {
+        margin-top: 12px; height: 200px; overflow-y: auto; background: #202124; color: #e8eaed;
+        border: 1px solid #333; padding: 10px; font-family: monospace; font-size: 11px;
+        white-space: pre-wrap; display: none; border-radius: 4px; line-height: 1.5;
+      }
+
+      /* Email settings editor (while running) */
+      #emailEditor { display: none; margin-top: 14px; }
+      #emailEditor .subtitle { margin-bottom: 4px; }
+      #emailSaveBtn { margin-top: 10px; }
+      #emailSavedNote { font-size: 12px; color: #137333; margin-top: 6px; display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Google Drive Tools</h2>
+
+      <div class="tabs">
+        <div class="tab active" id="tab-smart" onclick="switchTab('smart')">Smart Migrate to Shared Drive</div>
+        <div class="tab" id="tab-simple" onclick="switchTab('simple')">Simple Mover</div>
+      </div>
+
+      <!-- ============ SIMPLE MOVER ============ -->
+      <div class="panel" id="panel-simple">
+        <label for="fileUrls">File or Folder URLs (one per line):</label>
+        <textarea id="fileUrls" placeholder="Paste file or folder URLs here..."></textarea>
+
+        <label for="folderUrl">Target Folder URL:</label>
+        <input type="text" id="folderUrl" placeholder="https://drive.google.com/drive/folders/..." />
+
+        <button id="submitBtn" onclick="handleMoveFiles()">Move Items</button>
+        <div class="status-box" id="status"></div>
+      </div>
+
+      <!-- ============ SMART MIGRATE ============ -->
+      <div class="panel active" id="panel-smart">
+
+        <div id="runningBanner"></div>
+
+        <label for="smartSrc">Source Folder URL (Personal Drive, e.g. "Folder X"):</label>
+        <input type="text" id="smartSrc" placeholder="https://drive.google.com/drive/folders/..." />
+
+        <label for="smartDst">Target Folder URL (Shared Drive, e.g. "Free Storage Project"):</label>
+        <input type="text" id="smartDst" placeholder="https://drive.google.com/drive/folders/..." />
+        <div class="hint">A folder named "[SD] &lt;source name&gt;" will be created inside the target.</div>
+
+        <div class="check-row">
+          <input type="checkbox" id="copyForeign" checked />
+          <label for="copyForeign">Copy files owned by other people into the Shared Drive
+            (originals are parked in one [Unmovable] folder)</label>
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="bgMode" checked />
+          <label for="bgMode">Keep running in the background (recommended)</label>
+          <div class="hint">
+            Continues on Google's servers even if you close this page, lose power or your
+            browser goes idle. If the daily runtime limit is reached, it pauses and resumes
+            by itself later.
+          </div>
+        </div>
+
+        <!-- CC emails + notification type choices, shown before starting -->
+        <div class="subsection" id="startEmailBox">
+          <div class="subtitle">Email notifications</div>
+          <div class="hint">Sent to your own account (<span id="ownerEmailStart">you</span>) automatically.</div>
+
+          <label style="margin-top:10px">CC additional people (optional):</label>
+          <div class="cc-row">
+            <input type="email" id="ccInputStart" placeholder="name@example.com" onkeydown="if(event.key==='Enter'){event.preventDefault();addCc('start');}" />
+            <button type="button" class="small" onclick="addCc('start')">Add</button>
+          </div>
+          <div class="cc-list" id="ccListStart"></div>
+
+          <div class="notify-types" style="margin-top:10px">
+            <label style="margin-bottom:6px">Send email when:</label>
+            <span class="opt"><input type="checkbox" id="notifyPauseStart" checked /> <label for="notifyPauseStart">Paused (daily limit)</label></span>
+            <span class="opt"><input type="checkbox" id="notifyResumeStart" checked /> <label for="notifyResumeStart">Resumed</label></span>
+            <span class="opt"><input type="checkbox" id="notifyCompleteStart" checked /> <label for="notifyCompleteStart">Completed</label></span>
+          </div>
+        </div>
+
+        <button id="smartStartBtn" onclick="smartStart()">Start Migration</button>
+        <button id="smartContBtn" class="secondary" style="display:none" onclick="smartContinue()">Continue Migration</button>
+        <button id="smartBgBtn" class="outline" style="display:none" onclick="toggleBackground()">Stop Background Mode</button>
+        <button id="emailToggleBtn" class="outline" style="display:none" onclick="toggleEmailEditor()">Edit Email Notifications</button>
+        <button id="smartResetBtn" class="danger" style="display:none" onclick="smartReset()">Discard Saved Migration &amp; Start Over</button>
+
+        <!-- CC + notify editor for a migration that's already running/paused -->
+        <div class="subsection" id="emailEditor">
+          <div class="subtitle">Email notifications</div>
+          <div class="hint">Sent to <span id="ownerEmailRun">the account owner</span>. Changes apply immediately and do not interrupt the migration.</div>
+
+          <label style="margin-top:10px">CC additional people:</label>
+          <div class="cc-row">
+            <input type="email" id="ccInputRun" placeholder="name@example.com" onkeydown="if(event.key==='Enter'){event.preventDefault();addCc('run');}" />
+            <button type="button" class="small" onclick="addCc('run')">Add</button>
+          </div>
+          <div class="cc-list" id="ccListRun"></div>
+
+          <div class="notify-types" style="margin-top:10px">
+            <label style="margin-bottom:6px">Send email when:</label>
+            <span class="opt"><input type="checkbox" id="notifyPauseRun" /> <label for="notifyPauseRun">Paused (daily limit)</label></span>
+            <span class="opt"><input type="checkbox" id="notifyResumeRun" /> <label for="notifyResumeRun">Resumed</label></span>
+            <span class="opt"><input type="checkbox" id="notifyCompleteRun" /> <label for="notifyCompleteRun">Completed</label></span>
+          </div>
+
+          <button id="emailSaveBtn" onclick="saveEmailSettings()">Save Email Settings</button>
+          <div id="emailSavedNote">Saved.</div>
+        </div>
+
+        <div id="bgBadge"></div>
+
+        <div id="progressWrap">
+          <div class="progress-track"><div class="progress-fill" id="progressFill">0%</div></div>
+          <div class="progress-meta">
+            <span id="progressText">Folders: 0 / 0</span>
+            <span id="progressTimer">00:00</span>
+          </div>
+        </div>
+
+        <div class="status-box" id="smartStatus"></div>
+        <div class="log" id="smartLog"></div>
+      </div>
+    </div>
+
+    <script>
+      // ---------- Tabs ----------
+      function switchTab(name) {
+        document.getElementById('tab-simple').className = 'tab' + (name === 'simple' ? ' active' : '');
+        document.getElementById('tab-smart').className = 'tab' + (name === 'smart' ? ' active' : '');
+        document.getElementById('panel-simple').className = 'panel' + (name === 'simple' ? ' active' : '');
+        document.getElementById('panel-smart').className = 'panel' + (name === 'smart' ? ' active' : '');
+        if (name === 'smart') checkSavedMigration();
+      }
+
+      // ---------- Simple Mover ----------
+      function handleMoveFiles() {
+        var folderUrl = document.getElementById("folderUrl").value.trim();
+        var fileUrls = document.getElementById("fileUrls").value.trim();
+        var statusDiv = document.getElementById("status");
+        var btn = document.getElementById("submitBtn");
+
+        if (!folderUrl || !fileUrls) {
+          alert("Please provide both the Target Folder URL and at least one File/Folder URL.");
+          return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "Moving items...";
+        statusDiv.style.display = "block";
+        statusDiv.style.backgroundColor = "#e8f0fe";
+        statusDiv.innerText = "Processing request, please wait...";
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            btn.disabled = false;
+            btn.innerText = "Move Items";
+
+            if (res.error) {
+              statusDiv.style.backgroundColor = "#ffebee";
+              statusDiv.innerText = "Error: " + res.error;
+              return;
+            }
+
+            statusDiv.style.backgroundColor = "#e8f5e9";
+            statusDiv.innerHTML = "<strong>Completed!</strong><br>" +
+              "Moved: " + res.successCount + " item(s)<br>" +
+              (res.failCount > 0 ? "Failed/Skipped: " + res.failCount + "<br>" : "") +
+              "<a class='open-btn green' href='" + res.folderUrl + "' target='_blank'>Open Target Folder ↗</a>";
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            btn.innerText = "Move Items";
+            statusDiv.style.backgroundColor = "#ffebee";
+            statusDiv.innerText = "System execution error: " + err.message;
+          })
+          .processMoveRequests(fileUrls, folderUrl);
+      }
+
+      // ---------- Smart Migrate ----------
+      var timerHandle = null;
+      var timerStart = 0;
+      var pollHandle = null;
+      var lastReport = null;
+      var countdownHandle = null;
+      var ccListStart = [];
+      var ccListRun = [];
+
+      function startTimer() {
+        if (timerHandle) return;
+        timerStart = Date.now();
+        timerHandle = setInterval(function() {
+          var s = Math.floor((Date.now() - timerStart) / 1000);
+          var mm = ('0' + Math.floor(s / 60)).slice(-2);
+          var ss = ('0' + (s % 60)).slice(-2);
+          document.getElementById('progressTimer').innerText = mm + ':' + ss;
+        }, 1000);
+      }
+      function stopTimer() {
+        if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+      }
+      function stopPolling() {
+        if (pollHandle) { clearTimeout(pollHandle); pollHandle = null; }
+      }
+      function stopCountdown() {
+        if (countdownHandle) { clearInterval(countdownHandle); countdownHandle = null; }
+      }
+
+      // Lock or unlock the start-time form fields (used while a migration exists)
+      function setFormLocked(locked) {
+        document.getElementById('smartSrc').disabled = locked;
+        document.getElementById('smartDst').disabled = locked;
+        document.getElementById('copyForeign').disabled = locked;
+        document.getElementById('bgMode').disabled = locked;
+        document.getElementById('startEmailBox').style.display = locked ? 'none' : 'block';
+      }
+
+      // ---- CC chip helpers (shared by the "start" and "running" editors) ----
+      function isValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+      function addCc(which) {
+        var input = document.getElementById(which === 'start' ? 'ccInputStart' : 'ccInputRun');
+        var list = which === 'start' ? ccListStart : ccListRun;
+        var v = input.value.trim();
+        if (!v) return;
+        if (!isValidEmail(v)) { alert('Enter a valid email address.'); return; }
+        if (list.map(x => x.toLowerCase()).indexOf(v.toLowerCase()) === -1) list.push(v);
+        input.value = '';
+        renderCcList(which);
+      }
+      function removeCc(which, email) {
+        var list = which === 'start' ? ccListStart : ccListRun;
+        var idx = list.indexOf(email);
+        if (idx !== -1) list.splice(idx, 1);
+        renderCcList(which);
+      }
+      function renderCcList(which) {
+        var list = which === 'start' ? ccListStart : ccListRun;
+        var box = document.getElementById(which === 'start' ? 'ccListStart' : 'ccListRun');
+        box.innerHTML = '';
+        list.forEach(function(email) {
+          var chip = document.createElement('span');
+          chip.className = 'cc-chip';
+          chip.innerText = email;
+          var rm = document.createElement('button');
+          rm.type = 'button';
+          rm.innerText = '×';
+          rm.onclick = function() { removeCc(which, email); };
+          chip.appendChild(rm);
+          box.appendChild(chip);
+        });
+      }
+
+      function toggleEmailEditor() {
+        var box = document.getElementById('emailEditor');
+        var show = box.style.display !== 'block';
+        box.style.display = show ? 'block' : 'none';
+        if (show && lastReport) {
+          ccListRun = (lastReport.ccEmails || []).slice();
+          renderCcList('run');
+          var n = lastReport.notify || { pause: true, resume: true, complete: true };
+          document.getElementById('notifyPauseRun').checked = !!n.pause;
+          document.getElementById('notifyResumeRun').checked = !!n.resume;
+          document.getElementById('notifyCompleteRun').checked = !!n.complete;
+          document.getElementById('ownerEmailRun').innerText = lastReport.notifyEmail || 'the account owner';
+        }
+      }
+
+      function saveEmailSettings() {
+        var btn = document.getElementById('emailSaveBtn');
+        btn.disabled = true;
+        google.script.run
+          .withSuccessHandler(function(res) {
+            btn.disabled = false;
+            if (res.error) { alert('Error: ' + res.error); return; }
+            renderReport(res);
+            var note = document.getElementById('emailSavedNote');
+            note.style.display = 'block';
+            setTimeout(function() { note.style.display = 'none'; }, 2500);
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            alert('System error: ' + err.message);
+          })
+          .updateEmailSettings({
+            ccEmails: ccListRun,
+            notify: {
+              pause: document.getElementById('notifyPauseRun').checked,
+              resume: document.getElementById('notifyResumeRun').checked,
+              complete: document.getElementById('notifyCompleteRun').checked
+            }
+          });
+      }
+
+      function smartStart() {
+        var src = document.getElementById('smartSrc').value.trim();
+        var dst = document.getElementById('smartDst').value.trim();
+        if (!src || !dst) { alert('Please enter both the Source and Target folder URLs.'); return; }
+
+        smartBusy(true, 'Starting migration...');
+        document.getElementById('progressWrap').style.display = 'block';
+        updateBar(0, 0, 1);
+        startTimer();
+
+        google.script.run
+          .withSuccessHandler(smartHandle)
+          .withFailureHandler(smartFail)
+          .startMigration(src, dst, {
+            copyForeignFiles: document.getElementById('copyForeign').checked,
+            background: document.getElementById('bgMode').checked,
+            ccEmails: ccListStart,
+            notify: {
+              pause: document.getElementById('notifyPauseStart').checked,
+              resume: document.getElementById('notifyResumeStart').checked,
+              complete: document.getElementById('notifyCompleteStart').checked
+            }
+          });
+      }
+
+      function smartContinue() {
+        stopPolling();
+        smartBusy(true, 'Continuing migration...');
+        document.getElementById('progressWrap').style.display = 'block';
+        startTimer();
+        google.script.run
+          .withSuccessHandler(smartHandle)
+          .withFailureHandler(smartFail)
+          .continueMigration();
+      }
+
+      function toggleBackground() {
+        var turnOn = !(lastReport && lastReport.background);
+        document.getElementById('smartBgBtn').disabled = true;
+        google.script.run
+          .withSuccessHandler(function(res) {
+            document.getElementById('smartBgBtn').disabled = false;
+            if (res.error) { smartShow('#ffebee', '#c62828', 'Error: ' + res.error); return; }
+            renderReport(res);
+            if (res.background) startPolling();
+            else { stopPolling(); document.getElementById('smartContBtn').style.display = 'block'; }
+          })
+          .withFailureHandler(function(err) {
+            document.getElementById('smartBgBtn').disabled = false;
+            smartShow('#ffebee', '#c62828', 'System error: ' + err.message);
+          })
+          .setBackgroundMode(turnOn);
+      }
+
+      function smartReset() {
+        if (!confirm('Discard the saved migration progress and stop any background job? ' +
+                     'Folders already created/moved stay as they are.')) return;
+        stopPolling();
+        stopCountdown();
+        google.script.run.withSuccessHandler(function() {
+          stopTimer();
+          lastReport = null;
+          setFormLocked(false);
+          document.getElementById('runningBanner').style.display = 'none';
+          document.getElementById('smartStatus').style.display = 'none';
+          document.getElementById('smartLog').style.display = 'none';
+          document.getElementById('progressWrap').style.display = 'none';
+          document.getElementById('bgBadge').style.display = 'none';
+          document.getElementById('emailEditor').style.display = 'none';
+          document.getElementById('emailToggleBtn').style.display = 'none';
+          document.getElementById('smartStartBtn').style.display = 'block';
+          document.getElementById('smartStartBtn').disabled = false;
+          document.getElementById('smartContBtn').style.display = 'none';
+          document.getElementById('smartBgBtn').style.display = 'none';
+          document.getElementById('smartResetBtn').style.display = 'none';
+        }).resetMigrationState();
+      }
+
+      function updateBar(percent, done, total) {
+        var fill = document.getElementById('progressFill');
+        fill.style.width = percent + '%';
+        fill.innerText = percent + '%';
+        document.getElementById('progressText').innerText = 'Folders: ' + done + ' / ' + total;
+      }
+
+      function fmtTime(ms) {
+        if (!ms) return 'not yet';
+        var d = new Date(ms);
+        return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
+      }
+
+      function fmtCountdown(ms) {
+        if (ms <= 0) return 'any moment now';
+        var s = Math.floor(ms / 1000);
+        var h = Math.floor(s / 3600);
+        var m = Math.floor((s % 3600) / 60);
+        return h + 'h ' + ('0' + m).slice(-2) + 'm';
+      }
+
+      // Banner shown to anyone (including a teammate on the same account) when a migration exists
+      function renderRunningBanner(res) {
+        var box = document.getElementById('runningBanner');
+        if (res.finished) { box.style.display = 'none'; return; }
+
+        var state = res.paused ? 'is paused (daily limit)' :
+                    (res.background ? 'is running in the background' : 'is in progress');
+
+        box.style.display = 'block';
+        box.innerHTML =
+          '<strong class="title">A migration is already running</strong>' +
+          'The migration of "<strong>' + res.sourceName + '</strong>" ' + state + '. ' +
+          'A new migration cannot be started until it is finished.<br>' +
+          'Progress: ' + res.percent + '% (' + res.foldersDone + ' / ' + res.foldersTotal + ' folders)' +
+          (res.startedAtText ? '<br>Started: ' + res.startedAtText : '') +
+          '<br><span style="font-size:12px">Anyone signed in with this account sees the same migration. ' +
+          'It is safe to leave this page open just to watch.</span>';
+      }
+
+      function renderBadge(res) {
+        var badge = document.getElementById('bgBadge');
+        stopCountdown();
+        if (res.finished) { badge.style.display = 'none'; return; }
+        badge.style.display = 'block';
+
+        if (res.paused) {
+          badge.className = 'paused';
+          var draw = function() {
+            var left = res.resumeAt - Date.now();
+            badge.innerHTML = '<strong>Paused: daily runtime limit reached</strong> (' +
+              res.runtimeMinLimit + ' min).<br>Resumes automatically on <strong>' + res.resumeAtText +
+              '</strong> &mdash; in ' + fmtCountdown(left) + '.<br>' +
+              'You can also click "Continue Migration" to keep going now while this page is open.' +
+              '<span class="note">Note: manually continuing while paused runs through this page rather than ' +
+              'the daily-limit pause, but it still shares Google\'s other per-day quotas -- it can occasionally ' +
+              'get stuck or fail if those happen to be exhausted too.</span>';
+          };
+          draw();
+          countdownHandle = setInterval(draw, 30000);
+        } else if (res.background && res.triggerActive) {
+          badge.className = '';
+          badge.innerHTML = '<strong>Background mode: ON</strong> &mdash; safe to close this page. ' +
+            'Last server run: ' + fmtTime(res.lastRunAt) + '. ' +
+            'Daily runtime used: ' + res.runtimeMinUsed + ' / ' + res.runtimeMinLimit + ' min.' +
+            (res.lastError ? '<br>Last error: ' + res.lastError : '');
+        } else if (res.background && !res.triggerActive) {
+          badge.className = 'warn';
+          badge.innerHTML = '<strong>Background mode is enabled but no trigger was found.</strong> ' +
+            'Click "Stop Background Mode" then turn it on again, or use Continue Migration.';
+        } else {
+          badge.className = 'off';
+          badge.innerHTML = '<strong>Background mode: OFF</strong> &mdash; the migration only moves ' +
+            'while this page is open and running.';
+        }
+      }
+
+      function renderReport(res) {
+        lastReport = res;
+        var s = res.stats;
+        var summary =
+          'Files moved individually: ' + s.files +
+          ' | Folders moved whole: ' + s.foldersMoved +
+          ' | Folders recreated: ' + s.foldersRecreated +
+          ' | Empty folders removed: ' + s.foldersEmptied +
+          ' | Moved to Hidden Files in Folders: ' + s.hiddenFolders +
+          '<br>Parked in [Unmovable]: ' + s.parked +
+          ' | Copied: ' + s.copied +
+          ' | Errors: ' + s.errors;
+
+        updateBar(res.percent, res.foldersDone, res.foldersTotal);
+        renderBadge(res);
+        renderRunningBanner(res);
+
+        var lg = document.getElementById('smartLog');
+        lg.style.display = 'block';
+        lg.innerText = res.log.join('\n');
+        lg.scrollTop = lg.scrollHeight;
+
+        var bgBtn = document.getElementById('smartBgBtn');
+        bgBtn.innerText = res.background ? 'Stop Background Mode' : 'Turn On Background Mode';
+
+        var emailBtn = document.getElementById('emailToggleBtn');
+
+        if (res.finished) {
+          stopTimer();
+          stopPolling();
+          stopCountdown();
+          setFormLocked(false);
+          smartBusy(false);
+          document.getElementById('smartStartBtn').style.display = 'none';
+          document.getElementById('smartContBtn').style.display = 'none';
+          bgBtn.style.display = 'none';
+          emailBtn.style.display = 'none';
+          document.getElementById('emailEditor').style.display = 'none';
+          document.getElementById('smartResetBtn').style.display = 'block';
+          document.getElementById('smartResetBtn').innerText = 'Start a New Migration';
+
+          var extra = res.unmovableUrl
+            ? '<a class="open-btn gray" target="_blank" href="' + res.unmovableUrl + '">Open [Unmovable] ↗</a>' : '';
+
+          smartShow('#e8f5e9', '#2e7d32',
+            '<strong>Migration complete!</strong><br>' + summary + '<br>' +
+            '<a class="open-btn blue" target="_blank" href="' + res.sourceUrl + '">Open Personal Folder ↗</a>' +
+            '<a class="open-btn green" target="_blank" href="' + res.sdUrl + '">Open Shared Drive Folder ↗</a>' +
+            extra);
+        } else {
+          setFormLocked(true);
+          document.getElementById('smartStartBtn').style.display = 'none';
+          document.getElementById('smartResetBtn').style.display = 'block';
+          document.getElementById('smartResetBtn').innerText = 'Discard Saved Migration & Start Over';
+          bgBtn.style.display = 'block';
+          emailBtn.style.display = 'block';
+          smartShow(res.paused ? '#e8f0fe' : '#fff8e1', res.paused ? '#174ea6' : '#8a6d00',
+            (res.paused ? 'Paused: ' : 'Working on ') + '"' + res.sourceName + '"...<br>' + summary);
+        }
+      }
+
+      function smartHandle(res) {
+        // Someone else (or another tab) already has a migration going
+        if (res.alreadyRunning) {
+          stopTimer();
+          smartBusy(false);
+          if (res.status && !res.status.none) {
+            document.getElementById('progressWrap').style.display = 'block';
+            renderReport(res.status);
+            document.getElementById('smartContBtn').style.display = 'none';
+            if (!res.status.paused) startPolling();
+          }
+          smartShow('#fff4e5', '#7a4b00', res.error);
+          return;
+        }
+
+        if (res.error) {
+          stopTimer();
+          smartBusy(false);
+          smartShow('#ffebee', '#c62828', 'Error: ' + res.error);
+          return;
+        }
+
+        renderReport(res);
+        if (res.finished) return;
+
+        if (res.paused) {
+          // Waiting for the daily-limit pause to end; just watch
+          smartBusy(false);
+          document.getElementById('smartContBtn').style.display = 'block';
+          stopTimer();
+          startPolling();
+        } else if (res.background || res.workerBusy) {
+          // The server is (or will be) doing the work. Just watch progress.
+          smartBusy(false);
+          document.getElementById('smartContBtn').style.display = 'none';
+          startPolling();
+        } else {
+          // Foreground mode: this page drives the next slice
+          smartContinue();
+        }
+      }
+
+      // Watch a background migration without doing any work ourselves
+      function startPolling() {
+        stopPolling();
+        document.getElementById('progressWrap').style.display = 'block';
+        startTimer();
+        pollHandle = setTimeout(function() {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              if (res.none) { stopPolling(); stopTimer(); return; }
+              renderReport(res);
+              if (res.finished) return;
+              if (res.background || res.paused) {
+                document.getElementById('smartContBtn').style.display = res.paused ? 'block' : 'none';
+                startPolling();
+              } else {
+                // Background got switched off (e.g. repeated failures): offer manual continue
+                stopTimer();
+                document.getElementById('smartContBtn').style.display = 'block';
+              }
+            })
+            .withFailureHandler(function() { startPolling(); })
+            .getMigrationStatus();
+        }, 8000);
+      }
+
+      function smartFail(err) {
+        stopTimer();
+        smartBusy(false);
+        document.getElementById('smartStartBtn').style.display = 'none';
+        document.getElementById('smartContBtn').style.display = 'block';
+        document.getElementById('smartResetBtn').style.display = 'block';
+        smartShow('#ffebee', '#c62828',
+          'System error: ' + err.message + '<br>Progress is saved. Click "Continue Migration" to resume.');
+      }
+
+      function smartBusy(b, msg) {
+        document.getElementById('smartStartBtn').disabled = b;
+        document.getElementById('smartContBtn').disabled = b;
+        document.getElementById('smartResetBtn').disabled = b;
+        if (msg) smartShow('#e8f0fe', '#1a73e8', msg);
+      }
+
+      function smartShow(bg, color, html) {
+        var box = document.getElementById('smartStatus');
+        box.style.display = 'block';
+        box.style.backgroundColor = bg;
+        box.style.color = color;
+        box.innerHTML = html;
+      }
+
+      // On opening the Smart tab, pick up a migration that is already saved or running
+      function checkSavedMigration() {
+        google.script.run.withSuccessHandler(function(res) {
+          if (res.none) return;
+          if (res.notifyEmail) document.getElementById('ownerEmailStart').innerText = res.notifyEmail;
+          if (res.finished) return;
+
+          document.getElementById('smartStartBtn').style.display = 'none';
+          document.getElementById('smartResetBtn').style.display = 'block';
+          document.getElementById('progressWrap').style.display = 'block';
+          renderReport(res);
+
+          if (res.paused) {
+            document.getElementById('smartContBtn').style.display = 'block';
+            startPolling();
+          } else if (res.background && res.triggerActive) {
+            document.getElementById('smartContBtn').style.display = 'none';
+            smartShow('#e6f4ea', '#137333',
+              'A background migration of "<strong>' + res.sourceName + '</strong>" is running on the server. ' +
+              'This page will keep showing its progress.');
+            startPolling();
+          } else {
+            document.getElementById('smartContBtn').style.display = 'block';
+            smartShow('#fff8e1', '#8a6d00',
+              'An unfinished migration of "<strong>' + res.sourceName + '</strong>" was found. ' +
+              'Click "Continue Migration" to resume.');
+          }
+        }).getMigrationStatus();
+      }
+
+      // Load on first open so the Smart Migrate tab (now primary) is ready immediately
+      checkSavedMigration();
+    </script>
+  </body>
+</html>
